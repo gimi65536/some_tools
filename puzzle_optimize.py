@@ -1,6 +1,7 @@
 """Reference: http://www.csie.ntnu.edu.tw/~u91029/State.html"""
+"""Reference: http://mathworld.wolfram.com/15Puzzle.html"""
 import keyboard
-from itertools import chain
+from itertools import chain, count as infseries
 from operator import itemgetter
 class Puzzle:
 	heng = 0
@@ -90,16 +91,16 @@ def build_puzzle_from_matrix(m):
 def build_puzzle_samesize(p, anchor_x = -1, anchor_y = -1):
 	return Puzzle(p.heng, p.shu, anchor_x, anchor_y)
 
-def chain_puzzle(p):
+def chain_puzzle(p, delete_anchor = False):
 	p = catch_matrix(p)
-	return chain(*p)
+	return chain(*p) if not delete_anchor else (i for i in chain(*p) if i != '--')
 
 def permutation_inversion(l, target = None):
 	if target == None:
 		target = list(range(l))
 	d = {i: j for j, i in enumerate(target)}
 	l = list(map(lambda i: d[i], l))
-	sol = sum(i[0] > i[1] for i in zip(l, l[1:]))
+	sol = sum(l[i] > l[j] for i in range(len(l)) for j in range(i + 1, len(l)))
 	return sol
 
 def puzzle_heuristic(p, pright):
@@ -131,7 +132,7 @@ def move_puzzle(p, way):
 #return (bool, int)
 #@post: now_state is same as beginning
 def _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, now_gx, transfer_way, now_ans, **kwargs):
-	def is_reversed(now_ans):
+	"""def is_reversed(now_ans): #very redundant
 		for i in range(1, len(now_ans) // 2 + 1):
 			ite = zip(now_ans[(-i):], reversed(now_ans[(-2 * i):(-i)]))
 			success = True
@@ -140,7 +141,8 @@ def _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, now_
 					success = False
 					break
 			if success: return True
-		return False
+		return False"""
+	is_reversed = lambda l: (l[-1], l[-2]) in transfer_way if len(l) >= 2 else False
 	hx = h(now_state, target_state)
 	if now_gx + hx > bound: return (False, now_gx + hx) #next bound
 	if hx == 0: return (True, now_gx) #find solution
@@ -164,23 +166,32 @@ def _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, now_
 		now_ans.pop()
 	return (False, min(found_bound)) if len(found_bound) > 0 else (False, None)
 
-def IDAstar(now_state, target_state, h, can_move_state, move_state, transfer_way, **kwargs):
+def IDAstar(now_state, target_state, h, can_move_state, move_state, transfer_way, dynamic = False, **kwargs):
 	bound = 0
-	now_ans = []
-	while True:
-		is_ans, bound = _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, 0, transfer_way, now_ans, **kwargs)
-		print(bound)
-		if is_ans: return now_ans
+	if not dynamic:
+		now_ans = []
+		while True:
+			is_ans, bound = _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, 0, transfer_way, now_ans, **kwargs)
+			print(bound)
+			if is_ans: return now_ans
+	if dynamic:
+		pass
 
-def optimize_puzzle(p, istarget = True, anchor_x = -1, anchor_y = -1):
+def optimize_puzzle(p, istarget = True, anchor_x = -1, anchor_y = -1, dynamic = False):
 	if not isinstance(p, Puzzle):
 		p = build_puzzle_from_matrix(p)
 	if istarget:
 		now_puzzle, target_puzzle = build_puzzle_samesize(p, anchor_x, anchor_y), p
 	else:
 		target_puzzle, now_puzzle = build_puzzle_samesize(p, anchor_x, anchor_y), p
-	return IDAstar(now_puzzle, target_puzzle, puzzle_heuristic, can_move_puzzle, move_puzzle, [('up', 'down'), ('down', 'up'), ('left', 'right'), ('right', 'left')])
+	#print(permutation_inversion(list(chain_puzzle(target_puzzle, True)), list(chain_puzzle(now_puzzle, True))))
+	#print(list(chain_puzzle(target_puzzle, True)))
+	if ( permutation_inversion(list(chain_puzzle(now_puzzle, True)), list(chain_puzzle(target_puzzle, True))) + ((now_puzzle.heng - 1) * (now_puzzle.anchor[1] - target_puzzle.anchor[1])) ) % 2 == 1: return None
+	return IDAstar(now_puzzle, target_puzzle, puzzle_heuristic, can_move_puzzle, move_puzzle, [('up', 'down'), ('down', 'up'), ('left', 'right'), ('right', 'left')], dynamic = dynamic)
 
-target = [['B2', 'C2', 'C1', 'A4'], ['A2', 'B3', 'D1', 'B1'], ['A3', 'D3', 'C4', 'B4'], ['C3', 'A1', 'D2', '--']]
+target = [['B2', 'C2', 'C1', 'A4'],
+          ['A2', 'B3', 'D1', 'B1'],
+          ['A3', 'D3', 'C4', 'B4'],
+          ['C3', 'A1', 'D2', '--']]
 print(optimize_puzzle(target))
 #['left', 'up', 'left', 'down', 'left', 'up', 'right', 'down', 'right', 'right', 'up', 'up', 'up', 'left', 'left', 'down', 'right', 'down', 'left', 'left', 'up', 'up', 'right', 'down', 'left', 'down', 'down', 'right', 'right', 'right', 'up', 'left', 'left', 'up', 'right', 'right', 'down', 'left', 'up', 'up', 'right', 'down', 'left', 'down', 'down', 'left', 'up', 'right', 'down', 'right']
