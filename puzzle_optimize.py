@@ -1,8 +1,9 @@
 """Reference: http://www.csie.ntnu.edu.tw/~u91029/State.html"""
 """Reference: http://mathworld.wolfram.com/15Puzzle.html"""
-import keyboard
+import keyboard, heapq
 from itertools import chain, count as infseries
 from operator import itemgetter
+from copy import deepcopy
 class Puzzle:
 	heng = 0
 	shu = 0
@@ -127,24 +128,23 @@ def move_puzzle(p, way):
 	elif way == 'down': p.move(0, 1)
 	elif way == 'left': p.move(-1, 0)
 	elif way == 'right': p.move(1, 0)
-	return 1
+	return 1 #return cost
 
 #return (bool, int)
 #@post: now_state is same as beginning
-def _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, now_gx, transfer_way, now_ans, **kwargs):
-	"""def is_reversed(now_ans): #very redundant
-		for i in range(1, len(now_ans) // 2 + 1):
-			ite = zip(now_ans[(-i):], reversed(now_ans[(-2 * i):(-i)]))
-			success = True
-			for t in ite:
-				if t not in transfer_way:
-					success = False
-					break
-			if success: return True
-		return False"""
+def _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, now_gx, transfer_way, now_ans, heap, **kwargs):
 	is_reversed = lambda l: (l[-1], l[-2]) in transfer_way if len(l) >= 2 else False
 	hx = h(now_state, target_state)
-	if now_gx + hx > bound: return (False, now_gx + hx) #next bound
+	if now_gx + hx > bound:
+		if heap != None:
+			class _tuple(tuple):
+				_t = tuple()
+				def __init__(self, t):
+					self._t = t
+				def __lt__(self, another):
+					return self._t[:-1] < another._t[:-1]
+			heapq.heappush(heap, _tuple((now_gx + hx, now_gx, hx, now_ans.copy(), deepcopy(now_state))))
+		return (False, now_gx + hx) #next bound
 	if hx == 0: return (True, now_gx) #find solution
 	found_bound = []
 	for way, reversed_way in transfer_way:
@@ -155,11 +155,8 @@ def _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, now_
 		if is_reversed(now_ans):
 			now_ans.pop()
 			continue
-		"""if len(now_ans) >= 2 and (now_ans[-1], now_ans[-2]) in transfer_way:
-			now_ans.pop()
-			continue"""
 		cost = move_state(now_state, way, **kwargs)
-		is_ans, c = _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, now_gx + cost, transfer_way, now_ans, **kwargs)
+		is_ans, c = _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, now_gx + cost, transfer_way, now_ans, heap, **kwargs)
 		move_state(now_state, reversed_way, **kwargs)
 		if is_ans: return (True, c)
 		if c != None: found_bound.append(c)
@@ -171,11 +168,33 @@ def IDAstar(now_state, target_state, h, can_move_state, move_state, transfer_way
 	if not dynamic:
 		now_ans = []
 		while True:
-			is_ans, bound = _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, 0, transfer_way, now_ans, **kwargs)
-			print(bound)
+			is_ans, bound = _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, 0, transfer_way, now_ans, None, **kwargs)
 			if is_ans: return now_ans
 	if dynamic:
-		pass
+		def find_reverse(w): #reserved for another way using dynamic programming
+			for way, reversed_way in transfer_way:
+				if way == w:
+					return reversed_way
+		now_ans = []
+		heap = []
+		is_ans, bound = _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, 0, transfer_way, now_ans, heap, **kwargs)
+		while not is_ans:
+			#print(bound, count)
+			found_bound = []
+			while True:
+				pick = heap[0]
+				if pick[0] > bound:
+					#print(bound, pick[0], min(i[0] for i in heap))
+					break
+				heapq.heappop(heap)
+				now_ans = pick[3]
+				is_ans, c = _IDAstar(pick[-1], target_state, bound, h, can_move_state, move_state, pick[1], transfer_way, now_ans, heap, **kwargs)
+				if is_ans:
+					break
+				if c != None: found_bound.append(c)
+			if not is_ans:
+				bound = min(found_bound)
+		return now_ans
 
 def optimize_puzzle(p, istarget = True, anchor_x = -1, anchor_y = -1, dynamic = False):
 	if not isinstance(p, Puzzle):
@@ -193,5 +212,5 @@ target = [['B2', 'C2', 'C1', 'A4'],
           ['A2', 'B3', 'D1', 'B1'],
           ['A3', 'D3', 'C4', 'B4'],
           ['C3', 'A1', 'D2', '--']]
-print(optimize_puzzle(target))
+print(optimize_puzzle(target, dynamic = False))
 #['left', 'up', 'left', 'down', 'left', 'up', 'right', 'down', 'right', 'right', 'up', 'up', 'up', 'left', 'left', 'down', 'right', 'down', 'left', 'left', 'up', 'up', 'right', 'down', 'left', 'down', 'down', 'right', 'right', 'right', 'up', 'left', 'left', 'up', 'right', 'right', 'down', 'left', 'up', 'up', 'right', 'down', 'left', 'down', 'down', 'left', 'up', 'right', 'down', 'right']
