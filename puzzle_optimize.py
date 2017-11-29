@@ -1,6 +1,6 @@
 """Reference: http://www.csie.ntnu.edu.tw/~u91029/State.html"""
 """Reference: http://mathworld.wolfram.com/15Puzzle.html"""
-import keyboard, heapq
+import keyboard, heapq, time
 from itertools import chain, count as infseries
 from operator import itemgetter
 from copy import deepcopy
@@ -138,11 +138,8 @@ def _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, now_
 	if now_gx + hx > bound:
 		if heap != None:
 			class _tuple(tuple):
-				_t = tuple()
-				def __init__(self, t):
-					self._t = t
 				def __lt__(self, another):
-					return self._t[:-1] < another._t[:-1]
+					return self[:-1] < another[:-1]
 			heapq.heappush(heap, _tuple((now_gx + hx, now_gx, hx, now_ans.copy(), deepcopy(now_state))))
 		return (False, now_gx + hx) #next bound
 	if hx == 0: return (True, now_gx) #find solution
@@ -165,21 +162,26 @@ def _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, now_
 
 def IDAstar(now_state, target_state, h, can_move_state, move_state, transfer_way, dynamic = False, **kwargs):
 	bound = 0
+	start = time.time()
 	if not dynamic:
 		now_ans = []
 		while True:
+			#print(bound)
 			is_ans, bound = _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, 0, transfer_way, now_ans, None, **kwargs)
+			end = time.time()
+			#print(bound, end - start)
+			start = time.time()
 			if is_ans: return now_ans
 	if dynamic:
-		def find_reverse(w): #reserved for another way using dynamic programming
+		"""def find_reverse(w): #reserved for another way using dynamic programming...but the efficiency will be same as not using dynamic programming
 			for way, reversed_way in transfer_way:
 				if way == w:
-					return reversed_way
+					return reversed_way"""
 		now_ans = []
 		heap = []
 		is_ans, bound = _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, 0, transfer_way, now_ans, heap, **kwargs)
 		while not is_ans:
-			#print(bound, count)
+			#print(bound)
 			found_bound = []
 			while True:
 				pick = heap[0]
@@ -192,6 +194,9 @@ def IDAstar(now_state, target_state, h, can_move_state, move_state, transfer_way
 				if is_ans:
 					break
 				if c != None: found_bound.append(c)
+			end = time.time()
+			#print(bound, end - start)
+			start = time.time()
 			if not is_ans:
 				bound = min(found_bound)
 		return now_ans
@@ -208,9 +213,19 @@ def optimize_puzzle(p, istarget = True, anchor_x = -1, anchor_y = -1, dynamic = 
 	if ( permutation_inversion(list(chain_puzzle(now_puzzle, True)), list(chain_puzzle(target_puzzle, True))) + ((now_puzzle.heng - 1) * (now_puzzle.anchor[1] - target_puzzle.anchor[1])) ) % 2 == 1: return None
 	return IDAstar(now_puzzle, target_puzzle, puzzle_heuristic, can_move_puzzle, move_puzzle, [('up', 'down'), ('down', 'up'), ('left', 'right'), ('right', 'left')], dynamic = dynamic)
 
+def optimize_puzzles(start, end, anchor_char = '--', ordered_target = True):
+	pass
+	""""""
+	heng, shu = len(start[0]), len(start)
+	d = dict()
+
 target = [['B2', 'C2', 'C1', 'A4'],
           ['A2', 'B3', 'D1', 'B1'],
           ['A3', 'D3', 'C4', 'B4'],
           ['C3', 'A1', 'D2', '--']]
 print(optimize_puzzle(target, dynamic = False))
-#['left', 'up', 'left', 'down', 'left', 'up', 'right', 'down', 'right', 'right', 'up', 'up', 'up', 'left', 'left', 'down', 'right', 'down', 'left', 'left', 'up', 'up', 'right', 'down', 'left', 'down', 'down', 'right', 'right', 'right', 'up', 'left', 'left', 'up', 'right', 'right', 'down', 'left', 'up', 'up', 'right', 'down', 'left', 'down', 'down', 'left', 'up', 'right', 'down', 'right']
+#['left', 'up', 'left', 'down', 'left', 'up', 'right', 'down', 'right', 'right',
+# 'up', 'up', 'up', 'left', 'left', 'down', 'right', 'down', 'left', 'left',
+# 'up', 'up', 'right', 'down', 'left', 'down', 'down', 'right', 'right', 'right',
+# 'up', 'left', 'left', 'up', 'right', 'right', 'down', 'left', 'up', 'up',
+# 'right', 'down', 'left', 'down', 'down', 'left', 'up', 'right', 'down', 'right']
