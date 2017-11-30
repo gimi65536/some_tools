@@ -16,7 +16,7 @@ class Puzzle:
 		if matrix == None:
 			self.matrix = [[chr(a) + str(i) for a in range(ord('A'), ord('A') + heng)] for i in range(1, 1 + shu)]
 		else:
-			self.matrix = matrix
+			self.matrix = matrix.copy()
 		if anchor_x >= heng or anchor_x < -heng: anchor_x = -1
 		if anchor_y >= shu or anchor_y < -shu: anchor_y = -1
 		self.sign = anchor_sign
