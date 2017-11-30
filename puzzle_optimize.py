@@ -1,6 +1,6 @@
 """Reference: http://www.csie.ntnu.edu.tw/~u91029/State.html"""
 """Reference: http://mathworld.wolfram.com/15Puzzle.html"""
-import keyboard, heapq, time
+import keyboard, heapq, time, os
 from itertools import chain, count as infseries
 from operator import itemgetter
 from copy import deepcopy
@@ -9,20 +9,25 @@ class Puzzle:
 	shu = 0
 	matrix = []
 	anchor = (0, 0)
-	def __init__(self, heng, shu, anchor_x = -1, anchor_y = -1):
+	sign = '--'
+	def __init__(self, heng, shu, anchor_x = -1, anchor_y = -1, anchor_sign = '--', matrix = None):
 		self.heng = heng
 		self.shu = shu
-		self.matrix = [[chr(a) + str(i) for a in range(ord('A'), ord('A') + heng)] for i in range(1, 1 + shu)]
+		if matrix == None:
+			self.matrix = [[chr(a) + str(i) for a in range(ord('A'), ord('A') + heng)] for i in range(1, 1 + shu)]
+		else:
+			self.matrix = matrix
 		if anchor_x >= heng or anchor_x < -heng: anchor_x = -1
 		if anchor_y >= shu or anchor_y < -shu: anchor_y = -1
-		self.matrix[anchor_y][anchor_x] = '--'
+		self.sign = anchor_sign
+		self.matrix[anchor_y][anchor_x] = anchor_sign
 		self.anchor = (anchor_x if anchor_x >= 0 else heng + anchor_x, anchor_y if anchor_y >= 0 else shu + anchor_y)
 	def __str__(self):
 		s = '\n\n'.join([''.join(['{:<3}'.format(j) for j in i]) for i in self.matrix])
 		return s
 	def _moveone(self, _x, _y):
 		self.matrix[self.anchor[1]][self.anchor[0]] = self.matrix[self.anchor[1] + _y][self.anchor[0] + _x]
-		self.matrix[self.anchor[1] + _y][self.anchor[0] + _x] = '--'
+		self.matrix[self.anchor[1] + _y][self.anchor[0] + _x] = self.sign
 		self.anchor = (self.anchor[0] + _x, self.anchor[1] + _y)
 	def move(self, x = 0, y = 0):
 		if x == 0 and y == 0:
@@ -67,13 +72,13 @@ def catch_matrix(p):
 		return p.matrix
 	return p
 
-def catch_anchor(p):
+def catch_anchor(p, anchor_sign = '--'):
 	if isinstance(p, Puzzle):
 		return p.anchor
 	else:
 		for y, l in enumerate(p):
 			for x, c in enumerate(l):
-				if c == '--':
+				if c == anchor_sign:
 					return (x, y)
 
 def catch_hengshu(p):
@@ -82,19 +87,24 @@ def catch_hengshu(p):
 	else:
 		return (len(p[0]), len(p))
 
-def build_puzzle_from_matrix(m):
+def catch_anchorsign(p):
+	if isinstance(p, Puzzle):
+		return p.sign
+	else:
+		return '--'
+
+def build_puzzle_from_matrix(m, anchor_sign = '--'):
 	heng, shu = catch_hengshu(m)
-	anchor = catch_anchor(m)
-	p = Puzzle(heng, shu, anchor[0], anchor[1])
-	p.matrix = m.copy()
+	anchor = catch_anchor(m, anchor_sign)
+	p = Puzzle(heng, shu, anchor[0], anchor[1], anchor_sign = anchor_sign, matrix = m)
 	return p
 
 def build_puzzle_samesize(p, anchor_x = -1, anchor_y = -1):
 	return Puzzle(p.heng, p.shu, anchor_x, anchor_y)
 
-def chain_puzzle(p, delete_anchor = False):
+def chain_puzzle(p, delete_anchor = False, anchor_sign = '--'):
 	p = catch_matrix(p)
-	return chain(*p) if not delete_anchor else (i for i in chain(*p) if i != '--')
+	return chain(*p) if not delete_anchor else (i for i in chain(*p) if i != anchor_sign)
 
 def permutation_inversion(l, target = None):
 	if target == None:
@@ -104,15 +114,18 @@ def permutation_inversion(l, target = None):
 	sol = sum(l[i] > l[j] for i in range(len(l)) for j in range(i + 1, len(l)))
 	return sol
 
-def puzzle_heuristic(p, pright):
+#same anchor sign
+def puzzle_heuristic(p, pright, anchor_sign = None):
+	if anchor_sign == None: anchor_sign = catch_anchorsign(p)
 	p = catch_matrix(p)
 	pright = catch_matrix(pright)
-	dp = {c: (i, j) for j, l in enumerate(p) for i, c in enumerate(l) if c != '--'}
-	dpright = {c: (i, j) for j, l in enumerate(pright) for i, c in enumerate(l) if c != '--'}
-	return sum(abs(dp[c][0] - dpright[c][0]) + abs(dp[c][1] - dpright[c][1]) for c in chain_puzzle(p) if c != '--')
+	dp = {c: (i, j) for j, l in enumerate(p) for i, c in enumerate(l)}
+	dpright = {c: (i, j) for j, l in enumerate(pright) for i, c in enumerate(l)}
+	return sum(abs(dp[c][0] - dpright[c][0]) + abs(dp[c][1] - dpright[c][1]) for c in chain_puzzle(p, True, anchor_sign))
 
-def puzzle_heuristic_another(p, pright):
-	return sum(a != b for a, b in zip(chain_puzzle(p), chain_puzzle(pright)) if a != '--')
+def puzzle_heuristic_another(p, pright, anchor_sign = None):
+	if anchor_sign == None: anchor_sign = catch_anchorsign(p)
+	return sum(a != b for a, b in zip(chain_puzzle(p), chain_puzzle(pright)) if a != anchor_sign)
 
 def can_move_puzzle(p, way):
 	anchor = catch_anchor(p)
@@ -132,7 +145,7 @@ def move_puzzle(p, way):
 
 #return (bool, int)
 #@post: now_state is same as beginning
-def _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, now_gx, transfer_way, now_ans, heap, **kwargs):
+def _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, now_gx, transfer_way, now_ans, heap, printf, **kwargs):
 	is_reversed = lambda l: (l[-1], l[-2]) in transfer_way if len(l) >= 2 else False
 	hx = h(now_state, target_state)
 	if now_gx + hx > bound:
@@ -153,21 +166,28 @@ def _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, now_
 			now_ans.pop()
 			continue
 		cost = move_state(now_state, way, **kwargs)
-		is_ans, c = _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, now_gx + cost, transfer_way, now_ans, heap, **kwargs)
+		printf(now_gx + cost, bound, now_state, **kwargs)
+		is_ans, c = _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, now_gx + cost, transfer_way, now_ans, heap, printf, **kwargs)
 		move_state(now_state, reversed_way, **kwargs)
 		if is_ans: return (True, c)
+		printf(now_gx, bound, now_state, **kwargs)
 		if c != None: found_bound.append(c)
 		now_ans.pop()
 	return (False, min(found_bound)) if len(found_bound) > 0 else (False, None)
 
-def IDAstar(now_state, target_state, h, can_move_state, move_state, transfer_way, dynamic = False, **kwargs):
+def IDAstar(now_state, target_state, h, can_move_state, move_state, transfer_way, dynamic = False, printf = None, **kwargs):
+	if printf == None:
+		printf1 = lambda *a, **kwargs: None
+	else:
+		#printf1 = lambda g, b, state, **kwargs: (os.system('cls'), print('bound = {}   now cost = {}'.format(b, g)), printf(state))
+		printf1 = lambda g, b, state, **kwargs: (print('\n' * 30), print('bound = {}   now cost = {}'.format(b, g)), printf(state))
 	bound = 0
 	start = time.time()
 	if not dynamic:
 		now_ans = []
 		while True:
 			#print(bound)
-			is_ans, bound = _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, 0, transfer_way, now_ans, None, **kwargs)
+			is_ans, bound = _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, 0, transfer_way, now_ans, None, printf1, **kwargs)
 			end = time.time()
 			#print(bound, end - start)
 			start = time.time()
@@ -179,7 +199,7 @@ def IDAstar(now_state, target_state, h, can_move_state, move_state, transfer_way
 					return reversed_way"""
 		now_ans = []
 		heap = []
-		is_ans, bound = _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, 0, transfer_way, now_ans, heap, **kwargs)
+		is_ans, bound = _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, 0, transfer_way, now_ans, heap, printf1, **kwargs)
 		while not is_ans:
 			#print(bound)
 			found_bound = []
@@ -190,7 +210,7 @@ def IDAstar(now_state, target_state, h, can_move_state, move_state, transfer_way
 					break
 				heapq.heappop(heap)
 				now_ans = pick[3]
-				is_ans, c = _IDAstar(pick[-1], target_state, bound, h, can_move_state, move_state, pick[1], transfer_way, now_ans, heap, **kwargs)
+				is_ans, c = _IDAstar(pick[-1], target_state, bound, h, can_move_state, move_state, pick[1], transfer_way, now_ans, heap, printf1, **kwargs)
 				if is_ans:
 					break
 				if c != None: found_bound.append(c)
@@ -201,7 +221,11 @@ def IDAstar(now_state, target_state, h, can_move_state, move_state, transfer_way
 				bound = min(found_bound)
 		return now_ans
 
-def optimize_puzzle(p, istarget = True, anchor_x = -1, anchor_y = -1, dynamic = False):
+def is_reasonable_puzzles(p, q, anchor_sign = '--'):
+	return (permutation_inversion(list(chain_puzzle(p, True, anchor_sign)), list(chain_puzzle(q, True, anchor_sign))) + ((p.heng - 1) * (p.anchor[1] - q.anchor[1]))) % 2 == 0
+
+def optimize_puzzle(p, istarget = True, anchor_x = -1, anchor_y = -1, dynamic = False, visual = False):
+	"""matrix following a naming rule"""
 	if not isinstance(p, Puzzle):
 		p = build_puzzle_from_matrix(p)
 	if istarget:
@@ -210,22 +234,30 @@ def optimize_puzzle(p, istarget = True, anchor_x = -1, anchor_y = -1, dynamic = 
 		target_puzzle, now_puzzle = build_puzzle_samesize(p, anchor_x, anchor_y), p
 	#print(permutation_inversion(list(chain_puzzle(target_puzzle, True)), list(chain_puzzle(now_puzzle, True))))
 	#print(list(chain_puzzle(target_puzzle, True)))
-	if ( permutation_inversion(list(chain_puzzle(now_puzzle, True)), list(chain_puzzle(target_puzzle, True))) + ((now_puzzle.heng - 1) * (now_puzzle.anchor[1] - target_puzzle.anchor[1])) ) % 2 == 1: return None
-	return IDAstar(now_puzzle, target_puzzle, puzzle_heuristic, can_move_puzzle, move_puzzle, [('up', 'down'), ('down', 'up'), ('left', 'right'), ('right', 'left')], dynamic = dynamic)
+	if not is_reasonable_puzzles(now_puzzle, target_puzzle): return None
+	return IDAstar(now_puzzle, target_puzzle, puzzle_heuristic, can_move_puzzle, move_puzzle, [('up', 'down'), ('down', 'up'), ('left', 'right'), ('right', 'left')], printf = (None if not visual else lambda s: (print(s), print('\n' * 10), time.sleep(0.01))), dynamic = dynamic)
 
-def optimize_puzzles(start, end, anchor_char = '--', ordered_target = True):
-	pass
-	""""""
-	heng, shu = len(start[0]), len(start)
-	d = dict()
+def optimize_puzzle_matrix(start, end, anchor_sign = '--', dynamic = False, visual = False):
+	"""NO REPEATED ELEMENT"""
+	start_puzzle, end_puzzle = build_puzzle_from_matrix(start, anchor_sign), build_puzzle_from_matrix(end, anchor_sign)
+	if not is_reasonable_puzzles(start_puzzle, end_puzzle, anchor_sign): return None
+	return IDAstar(start_puzzle, end_puzzle, puzzle_heuristic, can_move_puzzle, move_puzzle, [('up', 'down'), ('down', 'up'), ('left', 'right'), ('right', 'left')], printf = (None if not visual else lambda s: (print(s), print('\n' * 10), time.sleep(0.01))), dynamic = dynamic)
 
 target = [['B2', 'C2', 'C1', 'A4'],
           ['A2', 'B3', 'D1', 'B1'],
           ['A3', 'D3', 'C4', 'B4'],
           ['C3', 'A1', 'D2', '--']]
-print(optimize_puzzle(target, dynamic = False))
+#print(optimize_puzzle(target, dynamic = False, visual = True))
 #['left', 'up', 'left', 'down', 'left', 'up', 'right', 'down', 'right', 'right',
 # 'up', 'up', 'up', 'left', 'left', 'down', 'right', 'down', 'left', 'left',
 # 'up', 'up', 'right', 'down', 'left', 'down', 'down', 'right', 'right', 'right',
 # 'up', 'left', 'left', 'up', 'right', 'right', 'down', 'left', 'up', 'up',
 # 'right', 'down', 'left', 'down', 'down', 'left', 'up', 'right', 'down', 'right']
+
+fromm = [[7, 0, 1, 9],
+         [6, 3, 2, 10],
+         [5, 4, 8, 11]]
+tom =   [[1, 2, 3, 11],
+         [4, 5, 6, 9],
+         [7, 8, 0, 10]]
+print(optimize_puzzle_matrix(fromm, tom, 0, visual = True))
