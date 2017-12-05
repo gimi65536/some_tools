@@ -119,9 +119,15 @@ def puzzle_heuristic(p, pright, anchor_sign = None):
 	if anchor_sign == None: anchor_sign = catch_anchorsign(p)
 	p = catch_matrix(p)
 	pright = catch_matrix(pright)
-	dp = {c: (i, j) for j, l in enumerate(p) for i, c in enumerate(l)}
-	dpright = {c: (i, j) for j, l in enumerate(pright) for i, c in enumerate(l)}
-	return sum(abs(dp[c][0] - dpright[c][0]) + abs(dp[c][1] - dpright[c][1]) for c in chain_puzzle(p, True, anchor_sign))
+	s = set(chain_puzzle(p, True, anchor_sign))
+	dp = {c: [] for c in s}
+	dpright = {c: [] for c in s}
+	for P, D in (p, dp), (pright, dpright):
+		for j, l in enumerate(P):
+			for i, c in enumerate(l):
+				if c != anchor_sign:
+					D[c].append((i, j))
+	return sum(sum(min(abs(o1_x - o2_x) + abs(o1_y - o2_y) for o2_x, o2_y in dpright[c]) for o1_x, o1_y in dp[c]) for c in s)
 
 def puzzle_heuristic_another(p, pright, anchor_sign = None):
 	if anchor_sign == None: anchor_sign = catch_anchorsign(p)
@@ -222,6 +228,8 @@ def IDAstar(now_state, target_state, h, can_move_state, move_state, transfer_way
 		return now_ans
 
 def is_reasonable_puzzles(p, q, anchor_sign = '--'):
+	for i in Counter(chain_puzzle(p)).values():
+		if i >= 2: return True
 	return (permutation_inversion(list(chain_puzzle(p, True, anchor_sign)), list(chain_puzzle(q, True, anchor_sign))) + ((p.heng - 1) * (p.anchor[1] - q.anchor[1]))) % 2 == 0
 
 def optimize_puzzle(p, istarget = True, anchor_x = -1, anchor_y = -1, dynamic = False, visual = False):
