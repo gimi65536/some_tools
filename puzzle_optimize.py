@@ -228,7 +228,7 @@ def IDAstar(now_state, target_state, h, can_move_state, move_state, transfer_way
 		return now_ans
 
 def is_reasonable_puzzles(p, q, anchor_sign = '--'):
-	for i in Counter(chain_puzzle(p)).values():
+	for i in Counter(chain_puzzle(p, False, anchor_sign)).values():
 		if i >= 2: return True
 	return (permutation_inversion(list(chain_puzzle(p, True, anchor_sign)), list(chain_puzzle(q, True, anchor_sign))) + ((p.heng - 1) * (p.anchor[1] - q.anchor[1]))) % 2 == 0
 
