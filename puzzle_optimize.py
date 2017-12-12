@@ -151,15 +151,10 @@ def move_puzzle(p, way):
 
 #return (bool, int)
 #@post: now_state is same as beginning
-def _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, now_gx, transfer_way, now_ans, heap, printf, **kwargs):
+def _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, now_gx, transfer_way, now_ans, printf, **kwargs):
 	is_reversed = lambda l: (l[-1], l[-2]) in transfer_way if len(l) >= 2 else False
 	hx = h(now_state, target_state)
 	if now_gx + hx > bound:
-		if heap != None:
-			class _tuple(tuple):
-				def __lt__(self, another):
-					return self[:-1] < another[:-1]
-			heapq.heappush(heap, _tuple((now_gx + hx, now_gx, hx, now_ans.copy(), deepcopy(now_state))))
 		return (False, now_gx + hx) #next bound
 	if hx == 0: return (True, now_gx) #find solution
 	found_bound = []
@@ -173,7 +168,7 @@ def _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, now_
 			continue
 		cost = move_state(now_state, way, **kwargs)
 		printf(now_gx + cost, bound, now_state, **kwargs)
-		is_ans, c = _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, now_gx + cost, transfer_way, now_ans, heap, printf, **kwargs)
+		is_ans, c = _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, now_gx + cost, transfer_way, now_ans, printf, **kwargs)
 		move_state(now_state, reversed_way, **kwargs)
 		if is_ans: return (True, c)
 		printf(now_gx, bound, now_state, **kwargs)
@@ -188,51 +183,23 @@ def IDAstar(now_state, target_state, h, can_move_state, move_state, transfer_way
 		#printf1 = lambda g, b, state, **kwargs: (os.system('cls'), print('bound = {}   now cost = {}'.format(b, g)), printf(state))
 		printf1 = lambda g, b, state, **kwargs: (print('\n' * 30), print('bound = {}   now cost = {}'.format(b, g)), printf(state))
 	bound = 0
-	start = time.time()
-	if not dynamic:
-		now_ans = []
-		while True:
-			#print(bound)
-			is_ans, bound = _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, 0, transfer_way, now_ans, None, printf1, **kwargs)
-			end = time.time()
-			#print(bound, end - start)
-			start = time.time()
-			if is_ans: return now_ans
-	if dynamic:
-		"""def find_reverse(w): #reserved for another way using dynamic programming...but the efficiency will be same as not using dynamic programming
-			for way, reversed_way in transfer_way:
-				if way == w:
-					return reversed_way"""
-		now_ans = []
-		heap = []
-		is_ans, bound = _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, 0, transfer_way, now_ans, heap, printf1, **kwargs)
-		while not is_ans:
-			#print(bound)
-			found_bound = []
-			while True:
-				pick = heap[0]
-				if pick[0] > bound:
-					#print(bound, pick[0], min(i[0] for i in heap))
-					break
-				heapq.heappop(heap)
-				now_ans = pick[3]
-				is_ans, c = _IDAstar(pick[-1], target_state, bound, h, can_move_state, move_state, pick[1], transfer_way, now_ans, heap, printf1, **kwargs)
-				if is_ans:
-					break
-				if c != None: found_bound.append(c)
-			end = time.time()
-			#print(bound, end - start)
-			start = time.time()
-			if not is_ans:
-				bound = min(found_bound)
-		return now_ans
+	#start = time.time()
+	now_ans = []
+	while True:
+		#print(bound)
+		is_ans, bound = _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, 0, transfer_way, now_ans, printf1, **kwargs)
+		#end = time.time()
+		#print(bound, end - start)
+		#start = time.time()
+		if is_ans: return now_ans
 
 def is_reasonable_puzzles(p, q, anchor_sign = '--'):
 	for i in Counter(chain_puzzle(p, False, anchor_sign)).values():
 		if i >= 2: return True
 	return (permutation_inversion(list(chain_puzzle(p, True, anchor_sign)), list(chain_puzzle(q, True, anchor_sign))) + ((p.heng - 1) * (p.anchor[1] - q.anchor[1]))) % 2 == 0
+	#return (permutation_inversion(list(chain_puzzle(p, anchor_sign)), list(chain_puzzle(q, anchor_sign))) + ((p.anchor[0] - q.anchor[0]) + (p.anchor[1] - q.anchor[1]))) % 2 == 0
 
-def optimize_puzzle(p, istarget = True, anchor_x = -1, anchor_y = -1, dynamic = False, visual = False):
+def optimize_puzzle(p, istarget = True, anchor_x = -1, anchor_y = -1, visual = False):
 	"""matrix following a naming rule"""
 	if not isinstance(p, Puzzle):
 		p = build_puzzle_from_matrix(p)
@@ -243,19 +210,19 @@ def optimize_puzzle(p, istarget = True, anchor_x = -1, anchor_y = -1, dynamic = 
 	#print(permutation_inversion(list(chain_puzzle(target_puzzle, True)), list(chain_puzzle(now_puzzle, True))))
 	#print(list(chain_puzzle(target_puzzle, True)))
 	if not is_reasonable_puzzles(now_puzzle, target_puzzle): return None
-	return IDAstar(now_puzzle, target_puzzle, puzzle_heuristic, can_move_puzzle, move_puzzle, [('up', 'down'), ('down', 'up'), ('left', 'right'), ('right', 'left')], printf = (None if not visual else lambda s: (print(s), print('\n' * 10), time.sleep(0.01))), dynamic = dynamic)
+	return IDAstar(now_puzzle, target_puzzle, puzzle_heuristic, can_move_puzzle, move_puzzle, [('up', 'down'), ('down', 'up'), ('left', 'right'), ('right', 'left')], printf = (None if not visual else lambda s: (print(s), print('\n' * 10), time.sleep(0.01))))
 
-def optimize_puzzle_matrix(start, end, anchor_sign = '--', dynamic = False, visual = False):
+def optimize_puzzle_matrix(start, end, anchor_sign = '--', visual = False):
 	"""NO REPEATED ELEMENT"""
 	start_puzzle, end_puzzle = build_puzzle_from_matrix(start, anchor_sign), build_puzzle_from_matrix(end, anchor_sign)
 	if not is_reasonable_puzzles(start_puzzle, end_puzzle, anchor_sign): return None
-	return IDAstar(start_puzzle, end_puzzle, puzzle_heuristic, can_move_puzzle, move_puzzle, [('up', 'down'), ('down', 'up'), ('left', 'right'), ('right', 'left')], printf = (None if not visual else lambda s: (print(s), print('\n' * 10), time.sleep(0.01))), dynamic = dynamic)
+	return IDAstar(start_puzzle, end_puzzle, puzzle_heuristic, can_move_puzzle, move_puzzle, [('up', 'down'), ('down', 'up'), ('left', 'right'), ('right', 'left')], printf = (None if not visual else lambda s: (print(s), print('\n' * 10), time.sleep(0.01))))
 
 target = [['B2', 'C2', 'C1', 'A4'],
           ['A2', 'B3', 'D1', 'B1'],
           ['A3', 'D3', 'C4', 'B4'],
           ['C3', 'A1', 'D2', '--']]
-#print(optimize_puzzle(target, dynamic = False, visual = True))
+#print(optimize_puzzle(target, visual = True))
 #['left', 'up', 'left', 'down', 'left', 'up', 'right', 'down', 'right', 'right',
 # 'up', 'up', 'up', 'left', 'left', 'down', 'right', 'down', 'left', 'left',
 # 'up', 'up', 'right', 'down', 'left', 'down', 'down', 'right', 'right', 'right',
