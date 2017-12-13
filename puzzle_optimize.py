@@ -176,7 +176,7 @@ def _IDAstar(now_state, target_state, bound, h, can_move_state, move_state, now_
 		now_ans.pop()
 	return (False, min(found_bound)) if len(found_bound) > 0 else (False, None)
 
-def IDAstar(now_state, target_state, h, can_move_state, move_state, transfer_way, dynamic = False, printf = None, **kwargs):
+def IDAstar(now_state, target_state, h, can_move_state, move_state, transfer_way, printf = None, **kwargs):
 	if printf == None:
 		printf1 = lambda *a, **kwargs: None
 	else:
