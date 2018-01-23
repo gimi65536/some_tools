@@ -6,9 +6,26 @@ using namespace std;
 template <typename T>
 using expr_type = remove_cv_t<remove_reference_t<T>>;
 template <typename T, typename U, typename ...Args>
-struct is_contain_first : bool_constant<is_same<expr_type<T>, expr_type<U>>::value || is_contain_first<expr_type<T>, Args...>::value>{};
+struct is_contain_first : bool_constant<is_same_v<expr_type<T>, expr_type<U>> || is_contain_first<expr_type<T>, Args...>::value>{};
 template <typename T, typename U>
-struct is_contain_first<T, U> : bool_constant<is_same<expr_type<T>, expr_type<U>>::value>{};
+struct is_contain_first<T, U> : bool_constant<is_same_v<expr_type<T>, expr_type<U>>>{};
+
+template<typename C>
+void total_size_helper(size_t& sol, const C& c1){
+	sol += c1.size();
+}
+template<typename C, typename ...Containers>
+void total_size_helper(size_t& sol, const C& c1, const Containers&... cs){
+	sol += c1.size();
+	total_size_helper(sol, cs...);
+}
+
+template<typename ...Containers>
+size_t total_size(const Containers&... cs){
+	size_t sol = 0;
+	total_size_helper(sol, cs...);
+	return sol;
+}
 
 template<typename R, typename T>
 void concatsv_helper(vector<R>& sol, const vector<T>& v){
@@ -26,6 +43,7 @@ void concatsv_helper(vector<R>& sol, const vector<T>& v1, const Vectors&... vs){
 template<typename ...Vectors>
 auto concatsv(const Vectors&... vs){
 	vector<common_type_t<typename Vectors::value_type...>> sol;
+	sol.reserve(total_size(vs...));
 	concatsv_helper(sol, vs...);
 	return sol;
 }
@@ -46,6 +64,15 @@ template<typename ...Maps>
 auto concatsm(const Maps&... ms){
 	map<common_type_t<typename Maps::key_type...>, common_type_t<typename Maps::mapped_type...>> sol;
 	concatsm_helper(sol, ms...);
+	return sol;
+}
+template<typename T, typename U>
+vector<T> keys(const map<T, U>& m){
+	vector<T> sol;
+	sol.reserve(m.size());
+	for(const auto& [key, value] : m){
+		sol.push_back(key);
+	}
 	return sol;
 }
 template<typename T, typename U>
