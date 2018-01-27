@@ -166,3 +166,147 @@ string join(string sep, const vector<T>& v){
 	}
 	return sol;
 }
+namespace StaticSort{
+	template<typename T, T a, T b>
+	struct less_than    : conditional_t<(a < b), true_type, false_type> {};
+	template<typename T, T a, T b>
+	struct greater_than : conditional_t<(a > b), true_type, false_type> {};
+
+	template<int ...Args>
+	struct Array{
+		static constexpr int element[sizeof...(Args)] = {Args...};
+	};
+#if __cplusplus < 201703L
+	//make Array::element linked
+	//In C++17, static member var can be inline, and not need to (but you still can) link outside.
+	//And, constexpr is implicitly inline.
+	//C++14, of course, still make you to do so:
+	template<int ...Args>
+	constexpr int Array<Args...>::element[sizeof...(Args)];
+#endif
+
+#if __cplusplus >= 201703L
+	template<size_t Now, size_t Begin, size_t End, typename A, auto...>
+	struct Picker{
+		//when Picker<_, _, _, Array<>>, no way to deduce Int.
+		using sol = A;
+	};
+	template<size_t Now, size_t Begin, size_t End, typename Int, template<Int...> class List, Int ...Args>
+	struct Picker<Now, Begin, End, List<Args...>>{
+		//Base case
+		using sol = List<Args...>;
+	};
+	template<size_t Now, size_t Begin, size_t End, typename Int, template<Int...> class List, Int ...Args, Int N, Int ...Rem>
+	struct Picker<Now, Begin, End, List<Args...>, N, Rem...>{
+		using sol = conditional_t<(Begin >= End || Now >= End), List<Args...>,
+			conditional_t<(Begin > Now), typename Picker<Now + 1, Begin, End, List<Args...>, Rem...>::sol,
+										 typename Picker<Now + 1, Begin, End, List<Args..., N>, Rem...>::sol>
+		>;
+	};
+	template<size_t Begin, size_t End, typename T>
+	struct Pick;
+	template<size_t Begin, size_t End, typename Int, template<Int...> class List, Int ...Args>
+	struct Pick<Begin, End, List<Args...>>{
+		using sol = conditional_t<(Begin >= End), List<>, typename Picker<0, Begin, End, List<>, Args...>::sol>;
+	};
+
+	template<typename T, typename A, typename B, template<typename, auto...> class U>
+	struct Merger{
+		//Merger<Array<>, Array<>, Array<>, Comp>, no way to deduce Int.
+		using sol = T;
+	};
+	template<typename Int, template<Int...> class List, template<class, Int, Int> class Comp, Int ...Args, Int ...Args1>
+	struct Merger<List<Args...>, List<Args1...>, List<>, Comp>{
+		using sol = List<Args..., Args1...>;
+	};
+	template<typename Int, template<Int...> class List, template<class, Int, Int> class Comp, Int N2, Int ...Args, Int ...Args2>
+	struct Merger<List<Args...>, List<>, List<N2, Args2...>, Comp>{
+		using sol = List<Args..., N2, Args2...>;
+	};
+	template<typename Int, template<Int...> class List, template<class, Int, Int> class Comp, Int N1, Int N2, Int ...Args, Int ...Args1, Int ...Args2>
+	struct Merger<List<Args...>, List<N1, Args1...>, List<N2, Args2...>, Comp>{
+		using sol = conditional_t<!(Comp<Int, N2, N1>::value),
+								  typename Merger<List<Args..., N1>, List<Args1...>, List<N2, Args2...>, Comp>::sol,
+								  typename Merger<List<Args..., N2>, List<N1, Args1...>, List<Args2...>, Comp>::sol>;
+	};
+
+	template<typename A, typename B, template<typename, auto...> class U>
+	struct Merge{
+		//called if both A, B is List<>
+		using sol = A;
+	};
+	template<typename Int, template<Int...> class List, template<class, Int, Int> class Comp, Int ...Args1, Int ...Args2>
+	struct Merge<List<Args1...>, List<Args2...>, Comp>{
+		using sol = typename Merger<List<>, List<Args1...>, List<Args2...>, Comp>::sol;
+	};
+
+	template<typename T, template<typename, auto...> class U>
+	struct MSort{
+		//called if T is List<>, or argument less than 2
+		using sol = T;
+	};
+	template<typename Int, template<Int...> class List, template<class, Int, Int> class Comp, Int N1, Int N2, Int ...Args>
+	struct MSort<List<N1, N2, Args...>, Comp>{
+		using sol = typename Merge<typename MSort<typename Pick<0, (sizeof...(Args) + 2) / 2, List<N1, N2, Args...>>::sol, Comp>::sol,
+								   typename MSort<typename Pick<(sizeof...(Args) + 2) / 2, (sizeof...(Args) + 2), List<N1, N2, Args...>>::sol, Comp>::sol, Comp>::sol;
+	};
+#else
+	//Where you cannot deduce template template.
+	template<typename Int, size_t Now, size_t Begin, size_t End, typename A, Int...>
+	struct Picker; //Int is given explicitly, no need to complete this case.
+	template<typename Int, size_t Now, size_t Begin, size_t End, template<Int...> class List, Int ...Args>
+	struct Picker<Int, Now, Begin, End, List<Args...>>{
+		//Base case
+		using sol = List<Args...>;
+	};
+	template<typename Int, size_t Now, size_t Begin, size_t End, template<Int...> class List, Int ...Args, Int N, Int ...Rem>
+	struct Picker<Int, Now, Begin, End, List<Args...>, N, Rem...>{
+		using sol = conditional_t<(Begin >= End || Now >= End), List<Args...>,
+			conditional_t<(Begin > Now), typename Picker<Int, Now + 1, Begin, End, List<Args...>, Rem...>::sol,
+										 typename Picker<Int, Now + 1, Begin, End, List<Args..., N>, Rem...>::sol>
+		>;
+	};
+
+	template<typename Int, size_t Begin, size_t End, typename T>
+	struct Pick;
+	template<typename Int, size_t Begin, size_t End, template<Int...> class List, Int ...Args>
+	struct Pick<Int, Begin, End, List<Args...>>{
+		using sol = conditional_t<(Begin >= End), List<>, typename Picker<Int, 0, Begin, End, List<>, Args...>::sol>;
+	};
+
+	template<typename Int, typename T, typename A, typename B, template<typename, Int...> class U>
+	struct Merger{}; //Int is given explicitly, no need to complete this case.
+	template<typename Int, template<Int...> class List, template<class, Int, Int> class Comp, Int ...Args, Int ...Args1>
+	struct Merger<Int, List<Args...>, List<Args1...>, List<>, Comp>{
+		using sol = List<Args..., Args1...>;
+	};
+	template<typename Int, template<Int...> class List, template<class, Int, Int> class Comp, Int N2, Int ...Args, Int ...Args2>
+	struct Merger<Int, List<Args...>, List<>, List<N2, Args2...>, Comp>{
+		using sol = List<Args..., N2, Args2...>;
+	};
+	template<typename Int, template<Int...> class List, template<class, Int, Int> class Comp, Int N1, Int N2, Int ...Args, Int ...Args1, Int ...Args2>
+	struct Merger<Int, List<Args...>, List<N1, Args1...>, List<N2, Args2...>, Comp>{
+		using sol = conditional_t<!(Comp<Int, N2, N1>::value),
+								  typename Merger<Int, List<Args..., N1>, List<Args1...>, List<N2, Args2...>, Comp>::sol,
+								  typename Merger<Int, List<Args..., N2>, List<N1, Args1...>, List<Args2...>, Comp>::sol>;
+	};
+
+	template<typename Int, typename A, typename B, template<typename, Int...> class U>
+	struct Merge{}; //Int is given explicitly, no need to complete this case.
+	template<typename Int, template<Int...> class List, template<class, Int, Int> class Comp, Int ...Args1, Int ...Args2>
+	struct Merge<Int, List<Args1...>, List<Args2...>, Comp>{
+		using sol = typename Merger<Int, List<>, List<Args1...>, List<Args2...>, Comp>::sol;
+	};
+
+	template<typename Int, typename T, template<typename, Int...> class U>
+	struct MSort{
+		//called if argument less than 2
+		using sol = T;
+	};
+	template<typename Int, template<Int...> class List, template<class, Int, Int> class Comp, Int N1, Int N2, Int ...Args>
+	struct MSort<Int, List<N1, N2, Args...>, Comp>{
+		using sol = typename Merge<Int, typename MSort<Int, typename Pick<Int, 0, (sizeof...(Args) + 2) / 2, List<N1, N2, Args...>>::sol, Comp>::sol,
+										typename MSort<Int, typename Pick<Int, (sizeof...(Args) + 2) / 2, (sizeof...(Args) + 2), List<N1, N2, Args...>>::sol, Comp>::sol, Comp>::sol;
+	};
+#endif
+}
