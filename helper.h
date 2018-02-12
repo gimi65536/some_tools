@@ -1,6 +1,12 @@
+#ifndef _DoYouNeedHelp_
+#define _DoYouNeedHelp_
+
 #include <type_traits>
 #include <vector>
 #include <map>
+#include <cstdint>
+#include <numeric>
+#include <cmath>
 using namespace std;
 
 #ifdef __cpp_concepts
@@ -166,14 +172,20 @@ string join(string sep, const vector<T>& v){
 	}
 	return sol;
 }
+namespace MathConstexpr{ //define math functions that in cmath without constexpr
+	template<typename T>
+	constexpr T abs(T a){
+		return (a >= 0 ? a : -a);
+	}
+}
 namespace StaticSort{
 	template<typename T, T a, T b>
 	struct less_than    : conditional_t<(a < b), true_type, false_type> {};
 	template<typename T, T a, T b>
 	struct greater_than : conditional_t<(a > b), true_type, false_type> {};
 
-	template<int ...Args>
-	struct Array{
+	template<typename Int, Int ...Args>
+	struct _Array{
 		static constexpr int element[sizeof...(Args)] = {Args...};
 	};
 #if __cplusplus < 201703L
@@ -181,9 +193,36 @@ namespace StaticSort{
 	//In C++17, static member var can be inline, and not need to (but you still can) link outside.
 	//And, constexpr is implicitly inline.
 	//C++14, of course, still make you to do so:
-	template<int ...Args>
-	constexpr int Array<Args...>::element[sizeof...(Args)];
+	template<typename Int, Int ...Args>
+	constexpr int _Array<Int, Args...>::element[sizeof...(Args)];
 #endif
+	using MathConstexpr::abs;
+	#if __cpp_lib_gcd >= 201606
+	using std::gcd;
+	#else
+	template<typename A, typename B>
+	constexpr common_type_t<A, B> gcd(A a, B b){
+		return (a == 0 ? StaticSort::abs(b) : (b == 0 ? StaticSort::abs(a) : gcd(b, a % b)));
+	}
+	#endif
+	template<typename Int>
+	class _ratio{
+	private:
+		Int num;
+		Int den;
+	public:
+		constexpr _ratio(const Int& n, const Int& d = 1) : num(StaticSort::abs(n)), den(StaticSort::abs(d)){
+			Int g = StaticSort::gcd(n, d);
+			num /= g;
+			den /= g;
+			if((n > 0 && d < 0) || (n < 0 && den > 0)){
+				num = -num;
+			}
+		}
+	};
+	using ratio = _ratio<intmax_t>;
+	#define newtypeARRAY(name, type) template<type ...Args> struct name : _Array<type, Args...>{}
+	newtypeARRAY(Array, int);
 
 #if __cplusplus >= 201703L
 	template<size_t Now, size_t Begin, size_t End, typename A, auto...>
@@ -203,6 +242,7 @@ namespace StaticSort{
 										 typename Picker<Now + 1, Begin, End, List<Args..., N>, Rem...>::sol>
 		>;
 	};
+
 	template<size_t Begin, size_t End, typename T>
 	struct Pick;
 	template<size_t Begin, size_t End, typename Int, template<Int...> class List, Int ...Args>
@@ -310,3 +350,5 @@ namespace StaticSort{
 	};
 #endif
 }
+
+#endif
