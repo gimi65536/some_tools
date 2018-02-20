@@ -199,6 +199,10 @@ namespace StaticSort{
 	using MathConstexpr::abs;
 	#if __cpp_lib_gcd >= 201606
 	using std::gcd;
+	template<typename A, typename B>
+	constexpr common_type_t<A, B> easygcd(A a, B b){ //avoid type check if std::gcd has
+		return (a == 0 ? StaticSort::abs(b) : (b == 0 ? StaticSort::abs(a) : easygcd(b, a % b)));
+	}
 	#else
 	template<typename A, typename B>
 	constexpr common_type_t<A, B> gcd(A a, B b){
