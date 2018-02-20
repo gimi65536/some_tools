@@ -199,14 +199,23 @@ namespace StaticSort{
 	using MathConstexpr::abs;
 	#if __cpp_lib_gcd >= 201606
 	using std::gcd;
+	using std::lcm;
 	template<typename A, typename B>
 	constexpr common_type_t<A, B> easygcd(A a, B b){ //avoid type check if std::gcd has
 		return (a == 0 ? StaticSort::abs(b) : (b == 0 ? StaticSort::abs(a) : easygcd(b, a % b)));
+	}
+	template<typename A, typename B>
+	constexpr common_type_t<A, B> easylcm(A a, B b){
+		return ((a != 0 && b != 0) ? (StaticSort::abs(a) / easygcd(a, b) * StaticSort::abs(b)) : static_cast<common_type_t<A, B>>(0));
 	}
 	#else
 	template<typename A, typename B>
 	constexpr common_type_t<A, B> gcd(A a, B b){
 		return (a == 0 ? StaticSort::abs(b) : (b == 0 ? StaticSort::abs(a) : gcd(b, a % b)));
+	}
+	template<typename A, typename B>
+	constexpr common_type_t<A, B> lcm(A a, B b){
+		return ((a != 0 && b != 0) ? (StaticSort::abs(a) / gcd(a, b) * StaticSort::abs(b)) : static_cast<common_type_t<A, B>>(0));
 	}
 	#endif
 	template<typename Int>
