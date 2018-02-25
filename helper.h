@@ -199,6 +199,14 @@ namespace Math{ //define math functions that C++14 lacks
 	constexpr common_type_t<A, B> lcm(A a, B b){
 		return ((a != 0 && b != 0) ? (MathConstexpr::abs(a) / gcd(a, b) * MathConstexpr::abs(b)) : static_cast<common_type_t<A, B>>(0));
 	}
+	template<typename A, typename B>
+	constexpr common_type_t<A, B> easygcd(A a, B b){ //avoid type check if std::gcd has
+		return gcd(a, b);
+	}
+	template<typename A, typename B>
+	constexpr common_type_t<A, B> easylcm(A a, B b){
+		return lcm(a, b);
+	}
 	#endif
 }
 namespace StaticSort{
@@ -368,6 +376,7 @@ namespace StaticSort{
 }
 
 //only apply for a > 0 && b > 0
+//whether there is a positive integer N satisfies a^N == b
 template<typename T>
 constexpr bool ispow(const T& a, const T& b){
 	using StaticSort::gcd;
@@ -375,14 +384,17 @@ constexpr bool ispow(const T& a, const T& b){
 		return true;
 	}
 	if(a > b){
-		return ispow(b, a);
-	}
-	auto g = gcd(a, b);
-	if(g == 1){
 		return false;
 	}
-	return ispow(a, b / g);
+	if(gcd(a, b) != a){
+		return false;
+	}
+	return ispow(a, b / a);
 	//return (a == b ? true : (a > b ? ispow(b, a) : (gcd(a, b) == 1 ? false : (ispow(a, b / gcd(a, b))))));
+}
+template<typename T>
+constexpr bool ispow_exchange(const T& a, const T& b){
+	return ispow(a, b) || ispow(b, a);
 }
 
 #endif
