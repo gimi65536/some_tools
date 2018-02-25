@@ -178,6 +178,29 @@ namespace MathConstexpr{ //define math functions that in cmath without constexpr
 		return (a >= 0 ? a : -a);
 	}
 }
+namespace Math{ //define math functions that C++14 lacks
+	#if __cpp_lib_gcd >= 201606
+	using std::gcd;
+	using std::lcm;
+	template<typename A, typename B>
+	constexpr common_type_t<A, B> easygcd(A a, B b){ //avoid type check if std::gcd has
+		return (a == 0 ? MathConstexpr::abs(b) : (b == 0 ? MathConstexpr::abs(a) : easygcd(b, a % b)));
+	}
+	template<typename A, typename B>
+	constexpr common_type_t<A, B> easylcm(A a, B b){
+		return ((a != 0 && b != 0) ? (MathConstexpr::abs(a) / easygcd(a, b) * MathConstexpr::abs(b)) : static_cast<common_type_t<A, B>>(0));
+	}
+	#else
+	template<typename A, typename B>
+	constexpr common_type_t<A, B> gcd(A a, B b){
+		return (a == 0 ? MathConstexpr::abs(b) : (b == 0 ? MathConstexpr::abs(a) : gcd(b, a % b)));
+	}
+	template<typename A, typename B>
+	constexpr common_type_t<A, B> lcm(A a, B b){
+		return ((a != 0 && b != 0) ? (MathConstexpr::abs(a) / gcd(a, b) * MathConstexpr::abs(b)) : static_cast<common_type_t<A, B>>(0));
+	}
+	#endif
+}
 namespace StaticSort{
 	template<typename T, T a, T b>
 	struct less_than    : conditional_t<(a < b), true_type, false_type> {};
@@ -197,27 +220,7 @@ namespace StaticSort{
 	constexpr int _Array<Int, Args...>::element[sizeof...(Args)];
 #endif
 	using MathConstexpr::abs;
-	#if __cpp_lib_gcd >= 201606
-	using std::gcd;
-	using std::lcm;
-	template<typename A, typename B>
-	constexpr common_type_t<A, B> easygcd(A a, B b){ //avoid type check if std::gcd has
-		return (a == 0 ? StaticSort::abs(b) : (b == 0 ? StaticSort::abs(a) : easygcd(b, a % b)));
-	}
-	template<typename A, typename B>
-	constexpr common_type_t<A, B> easylcm(A a, B b){
-		return ((a != 0 && b != 0) ? (StaticSort::abs(a) / easygcd(a, b) * StaticSort::abs(b)) : static_cast<common_type_t<A, B>>(0));
-	}
-	#else
-	template<typename A, typename B>
-	constexpr common_type_t<A, B> gcd(A a, B b){
-		return (a == 0 ? StaticSort::abs(b) : (b == 0 ? StaticSort::abs(a) : gcd(b, a % b)));
-	}
-	template<typename A, typename B>
-	constexpr common_type_t<A, B> lcm(A a, B b){
-		return ((a != 0 && b != 0) ? (StaticSort::abs(a) / gcd(a, b) * StaticSort::abs(b)) : static_cast<common_type_t<A, B>>(0));
-	}
-	#endif
+	using Math::gcd;
 	template<typename Int>
 	class _ratio{
 	private:
@@ -362,6 +365,24 @@ namespace StaticSort{
 										typename MSort<Int, typename Pick<Int, (sizeof...(Args) + 2) / 2, (sizeof...(Args) + 2), List<N1, N2, Args...>>::sol, Comp>::sol, Comp>::sol;
 	};
 #endif
+}
+
+//only apply for a > 0 && b > 0
+template<typename T>
+constexpr bool ispow(const T& a, const T& b){
+	using StaticSort::gcd;
+	if(a == b){
+		return true;
+	}
+	if(a > b){
+		return ispow(b, a);
+	}
+	auto g = gcd(a, b);
+	if(g == 1){
+		return false;
+	}
+	return ispow(a, b / g);
+	//return (a == b ? true : (a > b ? ispow(b, a) : (gcd(a, b) == 1 ? false : (ispow(a, b / gcd(a, b))))));
 }
 
 #endif
