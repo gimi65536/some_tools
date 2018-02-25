@@ -1,3 +1,5 @@
+//mainly written in C++17. attempt to support C++14.
+//some methods may be different from ways to use between those in C++14 and C++17
 #ifndef _DoYouNeedHelp_
 #define _DoYouNeedHelp_
 
@@ -379,7 +381,7 @@ namespace StaticSort{
 //whether there is a positive integer N satisfies a^N == b
 template<typename T>
 constexpr bool ispow(const T& a, const T& b){
-	using StaticSort::gcd;
+	using Math::gcd;
 	if(a == b){
 		return true;
 	}
@@ -395,6 +397,24 @@ constexpr bool ispow(const T& a, const T& b){
 template<typename T>
 constexpr bool ispow_exchange(const T& a, const T& b){
 	return ispow(a, b) || ispow(b, a);
+}
+//0 iff a == b or ispow_exchange(a, b) is false
+//behavior like log_a(b)
+template<typename T>
+constexpr int howpow(const T& a, T b){
+	using Math::gcd;
+	if(a == b){return 0;}
+	if(a > b){
+		return -howpow(b, a);
+	}
+	if(gcd(a, b) != a){return 0;}
+	T tmp = 0;
+	while(b > a && gcd(a, b) == a){
+		b /= a;
+		tmp++;
+	}
+	if(a == b){return tmp;}
+	return 0;
 }
 
 #endif
