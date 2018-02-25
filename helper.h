@@ -388,6 +388,7 @@ constexpr bool ispow(const T& a, const T& b){
 	if(a > b){
 		return false;
 	}
+	if(a == 1){return false;}
 	if(gcd(a, b) != a){
 		return false;
 	}
@@ -407,6 +408,7 @@ constexpr int howpow(const T& a, T b){
 	if(a > b){
 		return -howpow(b, a);
 	}
+	if(a == 1){return 0;} //error
 	if(gcd(a, b) != a){return 0;}
 	T tmp = 0;
 	while(b > a && gcd(a, b) == a){
