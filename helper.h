@@ -401,12 +401,13 @@ constexpr bool ispow_exchange(const T& a, const T& b){
 }
 //0 iff a == b or ispow_exchange(a, b) is false
 //behavior like log_a(b)
-template<typename T>
-constexpr int howpow(const T& a, T b){
+template<typename I, typename T>
+constexpr I _howpow(const T& a, T b){
+	//static_assert(is_signed_v<I>);
 	using Math::gcd;
 	if(a == b){return 0;}
 	if(a > b){
-		return -howpow(b, a);
+		return -_howpow<I>(b, a);
 	}
 	if(a == 1){return 0;} //error
 	if(gcd(a, b) != a){return 0;}
@@ -417,6 +418,10 @@ constexpr int howpow(const T& a, T b){
 	}
 	if(a == b){return tmp;}
 	return 0;
+}
+template<typename T>
+constexpr int howpow(const T& a, T b){
+	return _howpow<int>(a, b);
 }
 
 #endif
