@@ -420,7 +420,7 @@ constexpr I _howpow(const T& a, T b){
 	return 0;
 }
 template<typename T>
-constexpr int howpow(const T& a, T b){
+constexpr int howpow(const T& a, const T& b){
 	return _howpow<int>(a, b);
 }
 
