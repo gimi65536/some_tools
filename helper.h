@@ -412,10 +412,10 @@ constexpr I _howpow(const T& a, T b){
 	if(a == 1){return 0;} //error
 	if(gcd(a, b) != a){return 0;}
 	T tmp = 0;
-	while(b > a && gcd(a, b) == a){
+	do{
 		b /= a;
 		tmp++;
-	}
+	}while(b > a && gcd(a, b) == a);
 	if(a == b){return tmp;}
 	return 0;
 }
