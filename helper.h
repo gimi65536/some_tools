@@ -9,7 +9,14 @@
 #include <cstdint>
 #include <numeric>
 #include <cmath>
+#include <string>
+#include <sstream>
+#include <list>
 using namespace std;
+
+string cts(char c){
+	return string(1, c);
+}
 
 #ifdef __cpp_concepts
 template<typename T>
@@ -163,14 +170,16 @@ vector<U> values(const map<T, U>& m){
 	#endif
 	return sol;
 }
-template<typename T>
-string join(string sep, const vector<T>& v){
+template<typename Vector>
+string join(string sep, const Vector& v){
 	string sol;
-	for(int i = 0;i < v.size();i++){
-		if(i > 0){
+	bool success = false;
+	for(const auto& i : v){
+		if(success){
 			sol += sep;
 		}
-		sol += v[i];
+		success = true;
+		sol += i;
 	}
 	return sol;
 }
@@ -422,6 +431,37 @@ constexpr I _howpow(const T& a, T b){
 template<typename T>
 constexpr int howpow(const T& a, const T& b){
 	return _howpow<int>(a, b);
+}
+template<typename T, typename U>
+string notation_cast(T a, const U& notation){
+	using MathConstexpr::abs;
+	if(notation == 10){
+		return to_string(a);
+	}
+	if(a == 0){
+		return "0";
+	}
+	bool negative = false;
+	if constexpr(is_signed_v<T>){
+		if(a < 0){
+			negative = true;
+			a = abs(a);
+		}
+	}
+	list<string> l;
+	do{
+		T t = a % notation;
+		if(notation >= 36 || t < 10){
+			l.push_front(to_string(t));
+		}else if(t < 36){
+			l.push_front(cts(static_cast<char>('A' + (t - 10))));
+		}
+		a /= notation;
+	}while(a != 0);
+	if(notation >= 36){
+		return join("|", l);
+	}
+	return join("", l);
 }
 
 #endif
