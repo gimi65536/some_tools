@@ -434,6 +434,7 @@ constexpr int howpow(const T& a, const T& b){
 }
 template<typename T, typename U>
 string notation_cast(T a, const U& notation){
+	static constexpr int alphabet = 'Z' - 'A' + 1;
 	using MathConstexpr::abs;
 	if(notation == 10){
 		return to_string(a);
@@ -451,14 +452,14 @@ string notation_cast(T a, const U& notation){
 	list<string> l;
 	do{
 		T t = a % notation;
-		if(notation >= 36 || t < 10){
+		if(notation >= 10 + alphabet || t < 10){
 			l.push_front(to_string(t));
-		}else if(t < 36){
+		}else if(t < 10 + alphabet){
 			l.push_front(cts(static_cast<char>('A' + (t - 10))));
 		}
 		a /= notation;
 	}while(a != 0);
-	if(notation >= 36){
+	if(notation >= 10 + alphabet){
 		return join("|", l);
 	}
 	return join("", l);
