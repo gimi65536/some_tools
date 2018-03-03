@@ -189,7 +189,7 @@ namespace MathConstexpr{ //define math functions that in cmath without constexpr
 		return (a >= 0 ? a : -a);
 	}
 }
-namespace Math{ //define math functions that C++14 lacks
+namespace MathAddition{ //define math functions that C++14 lacks
 	#if __cpp_lib_gcd >= 201606
 	using std::gcd;
 	using std::lcm;
@@ -219,6 +219,11 @@ namespace Math{ //define math functions that C++14 lacks
 		return lcm(a, b);
 	}
 	#endif
+}
+namespace Math{
+	using namespace MathConstexpr;
+	using namespace MathAddition;
+	//other math functions lacks in C++ standard will put here
 }
 namespace StaticSort{
 	template<typename T, T a, T b>
