@@ -464,5 +464,23 @@ string notation_cast(T a, const U& notation){
 	}
 	return join("", l);
 }
+int count_char(const string& str, char c){
+	int sol = 0;
+	size_t pos = str.find(c);
+	while(pos != string::npos){
+		sol++;
+		pos = str.find(c, pos + 1);
+	}
+	return sol;
+}
+string repeat_str(const string& str, size_t n){
+	size_t size = str.length();
+	string sol;
+	sol.reserve(size * n);
+	for(int i = 0;i < n;i++){
+		sol.append(str);
+	}
+	return sol;
+}
 
 #endif
