@@ -223,7 +223,6 @@ namespace MathAddition{ //define math functions that C++14 lacks
 namespace Math{
 	using namespace MathConstexpr;
 	using namespace MathAddition;
-	//other math functions lacks in C++ standard will put here
 }
 namespace StaticSort{
 	template<typename T, T a, T b>
@@ -438,7 +437,7 @@ constexpr int howpow(const T& a, const T& b){
 	return _howpow<int>(a, b);
 }
 template<typename T, typename U>
-string notation_cast(T a, const U& notation){
+string numtostr_with_notation(T a, const U& notation){
 	static constexpr int alphabet = 'Z' - 'A' + 1;
 	using MathConstexpr::abs;
 	if(notation == 10){
