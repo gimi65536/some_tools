@@ -447,7 +447,11 @@ string numtostr_with_notation(T a, const U& notation){
 		return "0";
 	}
 	bool negative = false;
+	#if __cpp_if_constexpr >= 201606
 	if constexpr(is_signed_v<T>){
+	#else
+	if(is_signed<T>::value){
+	#endif
 		if(a < 0){
 			negative = true;
 			a = abs(a);
@@ -486,5 +490,8 @@ string repeat_str(const string& str, size_t n){
 	}
 	return sol;
 }
+#ifdef __helper_warn__
+#include "helper_warn.h"
+#endif
 
 #endif
